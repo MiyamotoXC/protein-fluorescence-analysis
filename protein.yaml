@@ -2,9 +2,12 @@
 # 由 analyze_protein.py / segment_nuclei.py / make_sample_data.py 共同读取
 
 # 数据布局（相对本文件所在目录）
-image_dir: protein_data/images          # 多通道荧光 TIFF
-mask_dir: protein_data/masks            # 细胞实例 mask（segment_nuclei.py 产出，0=背景 n=第n个细胞）
-nucleus_mask_dir: protein_data/masks_nuc  # 核实例 mask（同上，与细胞 mask 编号一一对应）
+image_dir: protein_data/images          # 多通道荧光 TIFF（下载或自行放入）
+
+# 产出目录：segment_nuclei.py 分割出的实例 mask 与 analyze_protein.py 的定量 CSV
+# 统一收在这里，与代码（*.py 与 protein.yaml）和原始数据（protein_data*）分开。
+# 跑合成演示数据时用 --out_dir outputs_synth，避免覆盖真实数据的结果。
+output_dir: outputs
 
 # 通道索引（按你的显微镜通道顺序调整）
 # 真实数据（download_protein.py）只有两个通道：Hoechst 核 + CellMask 胞质，

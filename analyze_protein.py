@@ -118,22 +118,22 @@ def analyze_one(image_path, mask_path, nuc_mask_path, cfg):
 
 def main():
     ap = argparse.ArgumentParser(description="蛋白质荧光逐细胞定量")
-    ap.add_argument("--out", default=os.path.join(HERE, "protein_features.csv"),
-                    help="输出 CSV 路径")
     ap.add_argument("--data_dir", default=None,
-                    help="覆盖 protein.yaml 的数据目录（其下 images/ masks/ masks_nuc/）；"
+                    help="覆盖 protein.yaml 的数据目录（其下 images/）；"
                          "跑合成演示数据用 protein_data_synth")
+    ap.add_argument("--out_dir", default=None,
+                    help="产出目录（默认 protein.yaml 的 output_dir），"
+                         "需与 segment_nuclei.py 传同一个值")
+    ap.add_argument("--out", default=None,
+                    help="输出 CSV 路径（默认 <out_dir>/protein_features.csv）")
     args = ap.parse_args()
 
     cfg = load_config()
-    if args.data_dir:
-        image_dir = os.path.join(args.data_dir, "images")
-        mask_dir = os.path.join(args.data_dir, "masks")
-        nuc_dir = os.path.join(args.data_dir, "masks_nuc")
-    else:
-        image_dir = os.path.join(HERE, cfg["image_dir"])
-        mask_dir = os.path.join(HERE, cfg["mask_dir"])
-        nuc_dir = os.path.join(HERE, cfg["nucleus_mask_dir"])
+    image_dir = (os.path.join(args.data_dir, "images") if args.data_dir
+                 else os.path.join(HERE, cfg["image_dir"]))
+    out_root = os.path.join(HERE, args.out_dir or cfg["output_dir"])
+    mask_dir = os.path.join(out_root, "segmentation", "masks")
+    nuc_dir = os.path.join(out_root, "segmentation", "masks_nuc")
 
     files = sorted(glob.glob(os.path.join(image_dir, "*.tif")) +
                    glob.glob(os.path.join(image_dir, "*.tiff")))
@@ -162,8 +162,11 @@ def main():
         for k in r.keys():
             if k not in fields:
                 fields.append(k)
-    os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    with open(args.out, "w", newline="", encoding="utf-8") as f:
+    out_csv = args.out or os.path.join(out_root, "protein_features.csv")
+    out_dir = os.path.dirname(out_csv)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+    with open(out_csv, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
         w.writerows(all_rows)
@@ -172,7 +175,7 @@ def main():
         vals = [r[key] for r in all_rows if key in r]
         return sum(vals) / len(vals) if vals else float("nan")
 
-    print(f"已写出 {len(all_rows)} 个细胞的特征 -> {args.out}")
+    print(f"已写出 {len(all_rows)} 个细胞的特征 -> {out_csv}")
     print(f"  蛋白A 平均表达 : {avg('proteinA_mean'):.1f}")
     print(f"  核/质定位比    : {avg('localization_ratio'):.2f}  (>1 偏核, <1 偏质)")
     if "pearson_AB" in fields:

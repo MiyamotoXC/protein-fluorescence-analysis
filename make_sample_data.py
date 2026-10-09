@@ -164,8 +164,8 @@ def main():
 
     print(f"\n已生成 {args.n_images} 个视野 -> {image_dir}")
     print("下一步（合成数据的共定位需要第 3 通道，记得把 protein.yaml 的 protein_b 改成 2）：")
-    print(f"  python segment_nuclei.py --data_dir {args.data_dir}")
-    print(f"  python analyze_protein.py --data_dir {args.data_dir}")
+    print(f"  python segment_nuclei.py --data_dir {args.data_dir} --out_dir outputs_synth")
+    print(f"  python analyze_protein.py --data_dir {args.data_dir} --out_dir outputs_synth")
 
 
 if __name__ == "__main__":

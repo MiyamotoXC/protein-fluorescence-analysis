@@ -22,8 +22,8 @@
 pip install -r requirements.txt
 
 python download_protein.py        # 下载真实双通道荧光（Hoechst + CellMask）
-python segment_nuclei.py          # 核/细胞实例分割 -> protein_data/masks/
-python analyze_protein.py         # 逐细胞定量 -> protein_features.csv
+python segment_nuclei.py          # 核/细胞实例分割 -> outputs/segmentation/
+python analyze_protein.py         # 逐细胞定量 -> outputs/protein_features.csv
 ```
 
 **真实数据源**（两个 Hugging Face 数据集，CC BY 4.0，来自同一批采集，视野名一一对应）：
@@ -89,7 +89,7 @@ python analyze_protein.py --data_dir protein_data_synth
 
 - 细胞前景必须**并入核区并外扩**。蛋白 A 偏胞质时核信号低于 Otsu 阈值，核会被整体排除出前景，
   导致"细胞区域反而比核小"、胞质为空、核/质比算出 NaN。
-- 分割结果写入 `protein_data/masks/`（细胞）与 `protein_data/masks_nuc/`（核），编号一一对应，
+- 分割结果写入 `outputs/segmentation/masks/`（细胞）与 `outputs/segmentation/masks_nuc/`（核），编号一一对应，
   `analyze_protein.py` 直接用 `nuclei == label & cell` 取核区。
 
 调参：`python segment_nuclei.py --min_distance 9 --min_size 60`
@@ -98,19 +98,28 @@ python analyze_protein.py --data_dir protein_data_synth
 
 ```
 蛋白质分析/
-├── protein.yaml           # 通道索引 + 数据路径 + 分析参数（三个脚本共用）
+├── protein.yaml           # 通道索引 + 数据路径 + 产出目录 + 分析参数（三个脚本共用）
 ├── download_protein.py    # 下载真实双通道荧光（Hoechst + CellMask）
 ├── make_sample_data.py    # 合成多通道荧光（零下载，含共定位）-> protein_data_synth/
 ├── segment_nuclei.py      # 核/细胞实例分割（无监督，无需训练）
-├── analyze_protein.py     # 表达定量 / 定位比 / 共定位 -> protein_features.csv
-└── requirements.txt
+├── analyze_protein.py     # 表达定量 / 定位比 / 共定位
+├── requirements.txt
+│
+├── protein_data/          # 数据：真实荧光图（download_protein.py 下载）
+├── protein_data_synth/    # 数据：合成演示数据
+├── outputs/               # 产出：全部结果都收在这里，与代码、数据分开
+│   ├── segmentation/
+│   │   ├── masks/         #   细胞实例 mask（segment_nuclei.py 产出）
+│   │   └── masks_nuc/     #   核实例 mask（与细胞编号一一对应）
+│   └── protein_features.csv  # 逐细胞定量结果（analyze_protein.py 产出）
+└── outputs_synth/         # 合成演示用的产出（避免覆盖真实数据的结果）
 
 ../细胞分析/               # 上游：分割底座 + 路线 A 聚类 + 路线 B 时序
 ```
 
 ## 输出字段
 
-`protein_features.csv` 每细胞一行：
+`outputs/protein_features.csv` 每细胞一行：
 
 | 字段 | 含义 |
 |---|---|

@@ -67,11 +67,23 @@ def segment_cells(foreground, nuclei, min_size):
     mask = mask | binary_dilation(nuclei > 0, disk(2))
     mask = binary_dilation(mask, disk(3))
     mask = closing(mask, disk(4))
+    # 注意：skimage 0.26 里 min_size 已废弃，新参数名 max_size 的实际行为是
+    # 「移除此值以下的小对象」（等价旧 min_size），别被名字误导
     mask = remove_small_objects(mask, max_size=min_size)
     if mask.sum() == 0:
         return None
     dist = ndi.distance_transform_edt(mask)
-    return watershed(-dist, nuclei, mask=mask).astype(np.uint16)
+    labels = watershed(-dist, nuclei, mask=mask).astype(np.uint16)
+    # 保证每个细胞都带胞质环：小核的周围像素会被相邻大核在分水岭里抢走，
+    # 这类细胞只剩核本身，下游的核/质定位比会除零变成 NaN。
+    # 这里把它的核外 2 px 环从邻域里划回来（每个核最多让邻居让出 2 px，影响可忽略）。
+    for lab in np.unique(nuclei):
+        if lab == 0:
+            continue
+        nm = nuclei == lab
+        if nm.any() and not (labels == lab)[~nm].any():
+            labels[binary_dilation(nm, disk(2)) & ~nm] = lab
+    return labels
 
 
 def main():
@@ -79,20 +91,21 @@ def main():
     ap.add_argument("--min_distance", type=int, default=7, help="核种子最小间距（像素）")
     ap.add_argument("--min_size", type=int, default=40, help="核最小面积（像素）")
     ap.add_argument("--data_dir", default=None,
-                    help="覆盖 protein.yaml 的数据目录（其下 images/ masks/ masks_nuc/）；"
+                    help="覆盖 protein.yaml 的数据目录（其下 images/）；"
                          "跑合成演示数据用 protein_data_synth")
+    ap.add_argument("--out_dir", default=None,
+                    help="产出目录（默认 protein.yaml 的 output_dir）；"
+                         "合成演示建议 outputs_synth，避免覆盖真实数据的结果")
     args = ap.parse_args()
 
     cfg = load_config()
     ch = cfg["channels"]
-    if args.data_dir:
-        image_dir = os.path.join(args.data_dir, "images")
-        mask_dir = os.path.join(args.data_dir, "masks")
-        nuc_dir = os.path.join(args.data_dir, "masks_nuc")
-    else:
-        image_dir = os.path.join(HERE, cfg["image_dir"])
-        mask_dir = os.path.join(HERE, cfg["mask_dir"])
-        nuc_dir = os.path.join(HERE, cfg["nucleus_mask_dir"])
+    image_dir = (os.path.join(args.data_dir, "images") if args.data_dir
+                 else os.path.join(HERE, cfg["image_dir"]))
+    out_root = os.path.join(HERE, args.out_dir or cfg["output_dir"])
+    # 分割产出放在 outputs/segmentation/ 下，与定量结果分开
+    mask_dir = os.path.join(out_root, "segmentation", "masks")
+    nuc_dir = os.path.join(out_root, "segmentation", "masks_nuc")
     os.makedirs(mask_dir, exist_ok=True)
     os.makedirs(nuc_dir, exist_ok=True)
 
@@ -100,7 +113,7 @@ def main():
                    glob.glob(os.path.join(image_dir, "*.tiff")))
     if not files:
         print(f"未找到图像于 {image_dir}。真实数据：python download_protein.py；"
-              f"合成演示：python make_sample_data.py --data_dir protein_data_synth")
+              f"合成演示：python make_sample_data.py")
         return
 
     for path in files:
@@ -130,7 +143,9 @@ def main():
 
     print(f"\n细胞 mask -> {mask_dir}")
     print(f"核 mask -> {nuc_dir}")
-    print("下一步：python analyze_protein.py")
+    print("下一步：python analyze_protein.py"
+          + (f" --data_dir {args.data_dir}" if args.data_dir else "")
+          + (f" --out_dir {args.out_dir}" if args.out_dir else ""))
 
 
 if __name__ == "__main__":

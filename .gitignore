@@ -10,6 +10,10 @@ protein_data/
 # 合成演示数据（make_sample_data.py）
 protein_data_synth/
 
+# 产出目录：分割 mask 与定量 CSV 都在这里
+outputs/
+outputs_synth/
+
 # 分析输出
 protein_features.csv
 
