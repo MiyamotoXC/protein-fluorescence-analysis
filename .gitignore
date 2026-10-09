@@ -5,19 +5,12 @@ __pycache__/
 .venv/
 venv/
 
-# 数据与中间产物（体积大，全部由脚本生成/下载）
-protein_data/
-# 合成演示数据（make_sample_data.py）
-protein_data_synth/
-
-# 产出目录：分割 mask 与定量 CSV 都在这里
-outputs/
-outputs_synth/
-
-# 分析输出
-protein_features.csv
-
 # 本地环境
 .env
 .idea/
 .vscode/
+
+# 说明：数据（protein_data、protein_data_synth）与产出（outputs、outputs_synth）
+# 都随仓库一起提交，克隆下来即可直接跑；本地测试账号、日志等才需要忽略。
+*.log
+*.err
