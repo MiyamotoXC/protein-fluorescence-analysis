@@ -1,0 +1,17 @@
+# 蛋白质荧光图像分析 — 通道与路径配置
+# 由 analyze_protein.py / segment_nuclei.py / make_sample_data.py 共同读取
+
+# 数据布局（相对本文件所在目录）
+image_dir: protein_data/images          # 多通道荧光 TIFF
+mask_dir: protein_data/masks            # 细胞实例 mask（segment_nuclei.py 产出，0=背景 n=第n个细胞）
+nucleus_mask_dir: protein_data/masks_nuc  # 核实例 mask（同上，与细胞 mask 编号一一对应）
+
+# 通道索引（按你的显微镜通道顺序调整；不需要共定位时把 protein_b 设为 null）
+channels:
+  nucleus: 0      # 核染色 DAPI / Hoechst
+  protein_a: 1    # 目标蛋白 A
+  protein_b: 2    # 共定位蛋白 B
+
+# 分析参数
+background_percentile: 5   # 用该分位作为背景基线并从强度中扣除
+manders_percentile: 50     # Manders 系数里判定「蛋白 B 高表达区」的分位

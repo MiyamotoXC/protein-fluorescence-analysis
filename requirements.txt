@@ -1,0 +1,10 @@
+# 蛋白质荧光图像分析依赖
+# 实测环境：Windows / Python 3.12
+
+numpy>=2.0
+scipy>=1.14               # 高斯滤波 / 距离变换（分割用）
+scikit-image>=0.26        # Otsu 阈值、分水岭、形态学、regionprops
+tifffile>=2024.1          # 多通道 TIFF 读写
+imageio>=2.38             # 图像落盘（cv2.imwrite 在中文路径下会静默失败）
+pyyaml>=6.0               # protein.yaml 通道与路径配置
+matplotlib>=3.11          # 可选：对 protein_features.csv 做散点/直方图

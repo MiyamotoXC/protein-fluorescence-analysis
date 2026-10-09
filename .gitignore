@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 数据与中间产物（体积大，全部由脚本生成）
+protein_data/
+
+# 分析输出
+protein_features.csv
+
+# 本地环境
+.env
+.idea/
+.vscode/
