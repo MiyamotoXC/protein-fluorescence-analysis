@@ -6,11 +6,15 @@ image_dir: protein_data/images          # 多通道荧光 TIFF
 mask_dir: protein_data/masks            # 细胞实例 mask（segment_nuclei.py 产出，0=背景 n=第n个细胞）
 nucleus_mask_dir: protein_data/masks_nuc  # 核实例 mask（同上，与细胞 mask 编号一一对应）
 
-# 通道索引（按你的显微镜通道顺序调整；不需要共定位时把 protein_b 设为 null）
+# 通道索引（按你的显微镜通道顺序调整）
+# 真实数据（download_protein.py）只有两个通道：Hoechst 核 + CellMask 胞质，
+# 因此 protein_b 为 null，共定位字段不输出；
+# 若要跑合成演示数据的共定位（make_sample_data.py 生成 3 通道），把它改成 2，
+# 并用 --data_dir protein_data_synth 指向合成数据。
 channels:
   nucleus: 0      # 核染色 DAPI / Hoechst
-  protein_a: 1    # 目标蛋白 A
-  protein_b: 2    # 共定位蛋白 B
+  protein_a: 1    # 目标蛋白 A（真实数据为 CellMask 胞质/膜染料）
+  protein_b: null # 共定位蛋白 B（null = 该数据没有第二个蛋白通道）
 
 # 分析参数
 background_percentile: 5   # 用该分位作为背景基线并从强度中扣除

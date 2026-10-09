@@ -120,17 +120,26 @@ def main():
     ap = argparse.ArgumentParser(description="蛋白质荧光逐细胞定量")
     ap.add_argument("--out", default=os.path.join(HERE, "protein_features.csv"),
                     help="输出 CSV 路径")
+    ap.add_argument("--data_dir", default=None,
+                    help="覆盖 protein.yaml 的数据目录（其下 images/ masks/ masks_nuc/）；"
+                         "跑合成演示数据用 protein_data_synth")
     args = ap.parse_args()
 
     cfg = load_config()
-    image_dir = os.path.join(HERE, cfg["image_dir"])
-    mask_dir = os.path.join(HERE, cfg["mask_dir"])
-    nuc_dir = os.path.join(HERE, cfg["nucleus_mask_dir"])
+    if args.data_dir:
+        image_dir = os.path.join(args.data_dir, "images")
+        mask_dir = os.path.join(args.data_dir, "masks")
+        nuc_dir = os.path.join(args.data_dir, "masks_nuc")
+    else:
+        image_dir = os.path.join(HERE, cfg["image_dir"])
+        mask_dir = os.path.join(HERE, cfg["mask_dir"])
+        nuc_dir = os.path.join(HERE, cfg["nucleus_mask_dir"])
 
     files = sorted(glob.glob(os.path.join(image_dir, "*.tif")) +
                    glob.glob(os.path.join(image_dir, "*.tiff")))
     if not files:
-        print(f"未找到图像于 {image_dir}。请先运行 python make_sample_data.py")
+        print(f"未找到图像于 {image_dir}。真实数据：python download_protein.py；"
+              f"合成演示：python make_sample_data.py")
         return
 
     all_rows = []

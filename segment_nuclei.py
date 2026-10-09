@@ -78,20 +78,29 @@ def main():
     ap = argparse.ArgumentParser(description="核/细胞实例分割（无需训练）")
     ap.add_argument("--min_distance", type=int, default=7, help="核种子最小间距（像素）")
     ap.add_argument("--min_size", type=int, default=40, help="核最小面积（像素）")
+    ap.add_argument("--data_dir", default=None,
+                    help="覆盖 protein.yaml 的数据目录（其下 images/ masks/ masks_nuc/）；"
+                         "跑合成演示数据用 protein_data_synth")
     args = ap.parse_args()
 
     cfg = load_config()
     ch = cfg["channels"]
-    image_dir = os.path.join(HERE, cfg["image_dir"])
-    mask_dir = os.path.join(HERE, cfg["mask_dir"])
-    nuc_dir = os.path.join(HERE, cfg["nucleus_mask_dir"])
+    if args.data_dir:
+        image_dir = os.path.join(args.data_dir, "images")
+        mask_dir = os.path.join(args.data_dir, "masks")
+        nuc_dir = os.path.join(args.data_dir, "masks_nuc")
+    else:
+        image_dir = os.path.join(HERE, cfg["image_dir"])
+        mask_dir = os.path.join(HERE, cfg["mask_dir"])
+        nuc_dir = os.path.join(HERE, cfg["nucleus_mask_dir"])
     os.makedirs(mask_dir, exist_ok=True)
     os.makedirs(nuc_dir, exist_ok=True)
 
     files = sorted(glob.glob(os.path.join(image_dir, "*.tif")) +
                    glob.glob(os.path.join(image_dir, "*.tiff")))
     if not files:
-        print(f"未找到图像于 {image_dir}。请先运行 python make_sample_data.py")
+        print(f"未找到图像于 {image_dir}。真实数据：python download_protein.py；"
+              f"合成演示：python make_sample_data.py --data_dir protein_data_synth")
         return
 
     for path in files:

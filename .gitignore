@@ -5,8 +5,10 @@ __pycache__/
 .venv/
 venv/
 
-# 数据与中间产物（体积大，全部由脚本生成）
+# 数据与中间产物（体积大，全部由脚本生成/下载）
 protein_data/
+# 合成演示数据（make_sample_data.py）
+protein_data_synth/
 
 # 分析输出
 protein_features.csv

@@ -6,41 +6,51 @@
 
 ## 它做什么
 
-输入多通道荧光 TIFF（通道顺序在 `protein.yaml` 里配置，默认 0=核, 1=蛋白A, 2=蛋白B），
-先做**无需训练的实例分割**（核通道 Otsu + 分水岭），再逐细胞输出：
+输入多通道荧光 TIFF（通道顺序在 `protein.yaml` 里配置），先做**无需训练的实例分割**
+（核通道 Otsu + 分水岭），再逐细胞输出：
 
-1. **蛋白 A 表达强度**：细胞区域内 mean / std（已扣除背景基线）
+1. **蛋白表达强度**：细胞区域内 mean / std（已扣除背景基线）
 2. **亚细胞定位**：核内 vs 胞质 强度比 `localization_ratio`（>1 偏核，<1 偏质）
-3. **双蛋白共定位**：Pearson's r 与 Manders' M1
+3. **双蛋白共定位**：Pearson's r 与 Manders' M1（需要第二个蛋白通道）
 4. **形态**：面积、偏心率、实心度、核面积
 
-## 快速开始（零下载）
+## 快速开始：真实数据
 
-仓库自带合成数据生成器，会刻意混入不同定位模式（偏核/偏质/均匀）与不同共定位关系，
-让下游指标呈现可区分的分布：
+默认走**真实公开数据集**，不需要任何合成数据：
 
 ```bash
 pip install -r requirements.txt
 
-python make_sample_data.py     # 生成 protein_data/images/*.tif（多通道荧光）
-python segment_nuclei.py       # 生成 protein_data/masks/ 与 masks_nuc/（实例 mask）
-python analyze_protein.py      # 逐细胞定量 -> protein_features.csv
+python download_protein.py        # 下载真实双通道荧光（Hoechst + CellMask）
+python segment_nuclei.py          # 核/细胞实例分割 -> protein_data/masks/
+python analyze_protein.py         # 逐细胞定量 -> protein_features.csv
 ```
 
-实测（6 个视野 × 24 细胞 = 144 个细胞）跑出来的分布：
+**真实数据源**（两个 Hugging Face 数据集，CC BY 4.0，来自同一批采集，视野名一一对应）：
 
-| 指标 | min | p25 | p50 | p75 | max |
-|---|---|---|---|---|---|
-| `localization_ratio` | 0.41 | 0.51 | 1.29 | 2.12 | 2.22 |
-| `pearson_AB` | 0.01 | 0.36 | 0.98 | 0.99 | 0.99 |
+| 用途 | 数据集 | 内容 |
+|---|---|---|
+| 核通道 | `einarolafsson/cross-channel-cell-from-hoechst` | Hoechst（DNA）通道，1998×1998 uint16 |
+| 胞质通道 | `einarolafsson/cross-channel-nuclei-from-cellmask` | CellMask 通道 + 核实例标注 |
 
-定位比呈双峰（偏质 vs 偏核）、Pearson 明显分离（共定位 vs 各自独立），
-说明这条链路真的在测量生物学信号，而不是输出一堆噪声。
+共 3029 个视野、264,503 个细胞核；`download_protein.py` 默认取 3 个视野
+（每个约 10 MB，可用 `--max_fields` 调整，用 `--list` 只看清单）。
+
+本机实测（3 个真实视野）：分割出 1784 个细胞，其中 `A02_1_1` 视野分出 742 个细胞、
+数据集自带标注为 683 个细胞核——分割与真值同量级。定量结果：
+
+| 指标 | min | p50 | max |
+|---|---|---|---|
+| `localization_ratio`（CellMask 核/质比） | 0.38 | 1.55 | 4.12 |
+
+关于**共定位**：这份公开数据只有 Hoechst 与 CellMask 两个通道，没有第二个蛋白通道，
+所以 `protein.yaml` 里 `protein_b` 为 `null`，CSV 不输出 `pearson_AB` / `mander_M1`。
+要跑共定位，用合成演示数据（3 通道）或换成你自己的双蛋白荧光图。
 
 ## 用你自己的数据
 
-不需要任何下载脚本：把多通道荧光 TIFF 直接放进 `protein_data/images/`，
-按你的显微镜通道顺序改 `protein.yaml`，然后照常跑后两步：
+不需要任何下载脚本：把多通道荧光 TIFF 放进 `protein_data/images/`，
+按显微镜的通道顺序改 `protein.yaml`，然后照常跑后两步：
 
 ```bash
 python segment_nuclei.py
@@ -50,11 +60,21 @@ python analyze_protein.py
 | 公开数据源 | 说明 |
 |---|---|
 | Human Protein Atlas 单细胞荧光 | 每张图 4 通道（蓝=核, 红=微管, 黄=ER, 绿=目标蛋白），研究蛋白质亚细胞定位的权威公开数据 https://www.proteinatlas.org/ |
-| Kaggle `human-protein-atlas-image-classification` | 相同多通道图，需 Kaggle 凭证 |
+| Kaggle `human-protein-atlas-image-classification` | 与 HPA 相同的多通道图，需 Kaggle 凭证 |
 | 任意 immunofluorescence 双/三通道 TIFF | 直接放进 `protein_data/images/` 即可 |
 
-只需要共定位以外的分析时，把 `protein.yaml` 里 `channels.protein_b` 设为 `null`，
-输出 CSV 会自动去掉 `pearson_AB` / `mander_M1` 两列。
+## 合成演示数据（零下载，含共定位）
+
+仓库自带生成器，会刻意混入不同定位模式（偏核/偏质/均匀）与不同共定位关系，
+**3 个通道**，因此可以用来验证共定位指标。它写到独立目录 `protein_data_synth/`，
+不会和真实数据混在一起：
+
+```bash
+python make_sample_data.py                                  # -> protein_data_synth/
+# 把 protein.yaml 的 channels.protein_b 改成 2 以启用共定位
+python segment_nuclei.py --data_dir protein_data_synth
+python analyze_protein.py --data_dir protein_data_synth
+```
 
 ## 分割是怎么做的（为什么不需要训练）
 
@@ -79,7 +99,8 @@ python analyze_protein.py
 ```
 蛋白质分析/
 ├── protein.yaml           # 通道索引 + 数据路径 + 分析参数（三个脚本共用）
-├── make_sample_data.py    # 合成多通道荧光数据（零下载跑通）
+├── download_protein.py    # 下载真实双通道荧光（Hoechst + CellMask）
+├── make_sample_data.py    # 合成多通道荧光（零下载，含共定位）-> protein_data_synth/
 ├── segment_nuclei.py      # 核/细胞实例分割（无监督，无需训练）
 ├── analyze_protein.py     # 表达定量 / 定位比 / 共定位 -> protein_features.csv
 └── requirements.txt
@@ -109,5 +130,6 @@ python analyze_protein.py
 | scikit-image | Otsu 阈值、分水岭、形态学、regionprops |
 | tifffile, imageio | 多通道 TIFF 读写 / 图像落盘 |
 | pyyaml | 读取 protein.yaml |
+| huggingface_hub | 真实数据集下载 |
 
 > 图像落盘统一用 `tifffile` / `imageio`：**`cv2.imwrite` 在中文路径下会返回 True 却不写文件**。

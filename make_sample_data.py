@@ -142,10 +142,12 @@ def main():
     ap.add_argument("--n_cells", type=int, default=24, help="每视野细胞数")
     ap.add_argument("--imgsz", type=int, default=512)
     ap.add_argument("--seed", type=int, default=7)
+    ap.add_argument("--data_dir", default="protein_data_synth",
+                    help="合成数据输出目录（与真实数据 protein_data 隔离）")
     args = ap.parse_args()
 
-    cfg = load_config()
-    image_dir = os.path.join(HERE, cfg["image_dir"])
+    # 合成数据固定写到独立目录，避免和 download_protein.py 下载的真实荧光图混在一起
+    image_dir = os.path.join(HERE, args.data_dir, "images")
     os.makedirs(image_dir, exist_ok=True)
     shape = (args.imgsz, args.imgsz)
     rng = np.random.default_rng(args.seed)
@@ -161,7 +163,9 @@ def main():
               f"共定位 {sum(1 for c in cells if c['coloc'])} 个")
 
     print(f"\n已生成 {args.n_images} 个视野 -> {image_dir}")
-    print("下一步：python segment_nuclei.py")
+    print("下一步（合成数据的共定位需要第 3 通道，记得把 protein.yaml 的 protein_b 改成 2）：")
+    print(f"  python segment_nuclei.py --data_dir {args.data_dir}")
+    print(f"  python analyze_protein.py --data_dir {args.data_dir}")
 
 
 if __name__ == "__main__":
